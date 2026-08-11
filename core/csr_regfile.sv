@@ -273,6 +273,7 @@ module csr_regfile
   logic [CVA6Cfg.XLEN-1:0] dscratch0_q, dscratch0_d;
   logic [CVA6Cfg.XLEN-1:0] dscratch1_q, dscratch1_d;
   logic [CVA6Cfg.XLEN-1:0] mtvec_q, mtvec_d;
+  localparam int unsigned MTVEC_ADDR_WIDTH = (CVA6Cfg.PLEN < CVA6Cfg.XLEN) ? CVA6Cfg.PLEN : CVA6Cfg.XLEN;
   logic [CVA6Cfg.XLEN-1:0] medeleg_q, medeleg_d;
   logic [CVA6Cfg.XLEN-1:0] mideleg_q, mideleg_d;
   logic [CVA6Cfg.XLEN-1:0] mip_q, mip_d;
@@ -1682,10 +1683,21 @@ module csr_regfile
         riscv::CSR_MTVEC: begin
           logic DirVecOnly;
           DirVecOnly = CVA6Cfg.DirectVecOnly ? 1'b0 : csr_wdata[0];
-          mtvec_d = {csr_wdata[CVA6Cfg.XLEN-1:2], 1'b0, DirVecOnly};
+          mtvec_d = {
+            {CVA6Cfg.XLEN - MTVEC_ADDR_WIDTH{1'b0}},
+            csr_wdata[MTVEC_ADDR_WIDTH-1:2],
+            1'b0,
+            DirVecOnly
+          };
           // we are in vector mode, this implementation requires the additional
           // alignment constraint of 64 * 4 bytes
-          if (DirVecOnly) mtvec_d = {csr_wdata[CVA6Cfg.XLEN-1:8], 7'b0, DirVecOnly};
+          if (DirVecOnly)
+            mtvec_d = {
+              {CVA6Cfg.XLEN - MTVEC_ADDR_WIDTH{1'b0}},
+              csr_wdata[MTVEC_ADDR_WIDTH-1:8],
+              7'b0,
+              DirVecOnly
+            };
         end
         riscv::CSR_MCOUNTEREN: begin
           if (CVA6Cfg.RVU) mcounteren_d = {{CVA6Cfg.XLEN - 32{1'b0}}, csr_wdata[31:0]};
